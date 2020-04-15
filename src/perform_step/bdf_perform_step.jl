@@ -617,6 +617,11 @@ function perform_step!(integrator,cache::QNDFConstantCache,repeat_step=false)
   cnt = integrator.iter
   κ = integrator.alg.kappa[k]
   flag = true
+  if(cnt > 4)
+    @show dt
+    dt = cache.h
+  end
+  @show dt == cache.h
   γₖ = [sum(1//j for j in 1:k) for k in 1:6]
   for i in 2:k
     if dts[i] != dts[1]
@@ -676,6 +681,7 @@ function perform_step!(integrator,cache::QNDFConstantCache,repeat_step=false)
   nlsolvefail(nlsolver) && return
   u = nlsolver.tmp + γ*z
 
+  #@show u
   if integrator.opts.adaptive
     if cnt == 1
       integrator.EEst = one(integrator.EEst)
@@ -755,6 +761,9 @@ function perform_step!(integrator,cache::QNDFCache,repeat_step=false)
   tmp = nlsolver.tmp
   cnt = integrator.iter
   k = order
+  @show dt
+  @show cache.h
+  #@show ("Here")
   κ = integrator.alg.kappa[k]
   γₖ = [sum(1//j for j in 1:k) for k in 1:6]
   flag = true
@@ -816,6 +825,7 @@ function perform_step!(integrator,cache::QNDFCache,repeat_step=false)
   markfirststage!(nlsolver)
   # initial guess
   @.. nlsolver.z = (uprev + tm -nlsolver.tmp)*inv(γ)
+  #@show nlsolver.z
   z = nlsolve!(nlsolver, integrator, cache, repeat_step)
   nlsolvefail(nlsolver) && return
   @.. u = nlsolver.tmp + γ*z
@@ -857,7 +867,7 @@ function perform_step!(integrator,cache::QNDFCache,repeat_step=false)
       @.. utilde = (κ*γₖ[k+1] + inv(k+2)) * tmp
       calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol, integrator.opts.internalnorm, t)
       errp1 = integrator.opts.internalnorm(atmp,t)
-      pass = stepsize_and_order!(cache, integrator.EEst, errm1, errp1, dt, k)
+      pass = stepsize_and_order!(cache, integrator.EEst, errm1, errp1, dt, k, integrator)
       if pass == false
         for i = 1:5
           fill!(D[i], zero(eltype(u)))
